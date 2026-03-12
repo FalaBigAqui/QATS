@@ -5,7 +5,7 @@ import threading
 import queue
 import time
 
-
+# Definição da classe ScreenRecorder
 class ScreenRecorder:
 
     def __init__(self, clock, video_file, fps=10):
@@ -16,7 +16,8 @@ class ScreenRecorder:
 
         self.running = False
         self.frame_queue = queue.Queue(maxsize=240)
-
+    
+    # Definição da captura da tela
     def capture(self):
 
         with mss.mss() as sct:
@@ -36,7 +37,7 @@ class ScreenRecorder:
                     self.frame_queue.put((frame, timestamp))
 
                 time.sleep(1/self.fps)
-
+    
     def write(self):
 
         with mss.mss() as sct:
@@ -73,9 +74,10 @@ class ScreenRecorder:
             except queue.Empty:
                 pass
 
-        # MUITO IMPORTANTE
+        # Comando para garantir que o arquivo não saia corrompido
         out.release()
 
+    # Definição para o inicio da funcionalidade
     def start(self):
 
         self.running = True
@@ -86,6 +88,7 @@ class ScreenRecorder:
         self.capture_thread.start()
         self.write_thread.start()
 
+    # Definição para finalização da funcionalidade
     def stop(self):
 
         self.running = False
