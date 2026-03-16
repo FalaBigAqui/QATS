@@ -10,6 +10,6 @@ def create_session_files():
     os.makedirs("recordings", exist_ok=True)
 
     log_file = f"logs/session_{timestamp}.log"
-    video_file = f"recordings/session_{timestamp}.avi"
+    video_file = f"recordings/session_{timestamp}.mp4"
 
     return log_file, video_file
