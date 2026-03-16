@@ -8,14 +8,16 @@ import time
 # Definição da classe ScreenRecorder
 class ScreenRecorder:
 
-    def __init__(self, clock, video_file, fps=10):
+    def __init__(self, clock, video_file, fps=30):
 
         self.clock = clock
         self.video_file = video_file
         self.fps = fps
 
+        self.frame_interval = 1 / fps
+
         self.running = False
-        self.frame_queue = queue.Queue(maxsize=240)
+        self.frame_queue = queue.Queue(maxsize=300)
     
     # Definição da captura da tela
     def capture(self):
@@ -24,19 +26,28 @@ class ScreenRecorder:
 
             monitor = sct.monitors[1]
 
+            next_frame_time = time.perf_counter()
+
             while self.running:
 
-                img = sct.grab(monitor)
-                frame = np.array(img)
+                now = time.perf_counter
 
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+                if now >= next_frame_time:
+                    
+                    img = sct.grab(monitor)
+                    frame = np.array(img)
 
-                timestamp = self.clock.formatted()
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
 
-                if not self.frame_queue.full():
-                    self.frame_queue.put((frame, timestamp))
+                    timestamp = self.clock.formatted()
 
-                time.sleep(1/self.fps)
+                    if not self.frame_queue.full():
+                        self.frame_queue.put((frame, timestamp))
+
+                    next_frame_time += self.frame_interval
+
+                else:
+                    time.sleep(0.001)
     
     def write(self):
 
@@ -48,8 +59,8 @@ class ScreenRecorder:
 
         out = cv2.VideoWriter(
             self.video_file,
-            cv2.VideoWriter_fourcc(*"XVID"),
-            self.fps,
+            cv2.VideoWriter_fourcc(*"H264"),
+            30,
             (width, height)
         )
 
