@@ -5,7 +5,7 @@ import threading
 import queue
 import time
 
-
+# Definindo a classe para Gravação de tela
 class ScreenRecorder:
 
     def __init__(self, clock, video_file, fps=30):
@@ -37,6 +37,7 @@ class ScreenRecorder:
 
     def write(self):
 
+        # Detecta o monitor principal, seu tamanho e qual sera o tipo do arquivo de gravação
         with mss.mss() as sct:
             monitor = sct.monitors[1]
 
@@ -70,6 +71,7 @@ class ScreenRecorder:
                         out.write(last_frame)
                         written_frames += 1
 
+                # Timer que irá aparecer no canto superior esquerdo na gravação finalizada
                 cv2.putText(
                     frame,
                     self.clock.formatted(),
@@ -90,6 +92,7 @@ class ScreenRecorder:
 
         out.release()
 
+# Definindo as atividades de inicio após o usuário iniciar a automação    
     def start(self):
 
         self.running = True
