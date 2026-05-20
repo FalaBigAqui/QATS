@@ -5,7 +5,7 @@ import threading
 import queue
 import time
 
-# Definindo a classe para Gravação de tela
+# Definindo a classe ScreenRecorder
 class ScreenRecorder:
 
     def __init__(self, clock, video_file, fps=30):
@@ -17,7 +17,9 @@ class ScreenRecorder:
         self.running = False
         self.frame_queue = queue.Queue(maxsize=300)
 
-    def capture(self):
+    def capture(self): # Definindo a função captura
+
+        frame_interval = 1.0 / self.fps  # ~0.0333s por frame em 30 FPS
 
         with mss.mss() as sct:
 
@@ -25,22 +27,32 @@ class ScreenRecorder:
 
             while self.running:
 
+                frame_start = time.monotonic()
+
                 img = sct.grab(monitor)
                 frame = np.array(img)
-
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
-
                 timestamp = self.clock.elapsed()
 
-                if not self.frame_queue.full():
-                    self.frame_queue.put((frame, timestamp))
+                # Derruba o frame mais antigo para abrir espaço do que só apenas pular silenciosamente
+                if self.frame_queue.full():
+                    try:
+                        self.frame_queue.get_nowait()
+                    except queue.Empty:
+                        pass
 
-    def write(self):
+                self.frame_queue.put((frame, timestamp))
 
-        # Detecta o monitor principal, seu tamanho e qual sera o tipo do arquivo de gravação
+                # Sleep durante o resto deste frame slot
+                elapsed = time.monotonic() - frame_start
+                sleep_time = frame_interval - elapsed
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
+
+    def write(self): # Definindo a escrita do arquivo final
+
         with mss.mss() as sct:
             monitor = sct.monitors[1]
-
             width = monitor["width"]
             height = monitor["height"]
 
@@ -62,28 +74,26 @@ class ScreenRecorder:
 
                 frame, timestamp = self.frame_queue.get(timeout=1)
 
-                # calcula quantos frames deveriam existir até agora
-                expected_frames = int(timestamp * self.fps)
-
-                while written_frames < expected_frames:
-
-                    if last_frame is not None:
-                        out.write(last_frame)
-                        written_frames += 1
-
-                # Timer que irá aparecer no canto superior esquerdo na gravação finalizada
                 cv2.putText(
                     frame,
                     self.clock.formatted(),
-                    (20,40),
+                    (20, 40),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     1,
-                    (255,255,255),
+                    (255, 255, 255),
                     2
                 )
 
-                out.write(frame)
+                # Quantos frames eram para ser escritos nesse tempo
+                expected_frames = int(timestamp * self.fps)
 
+                # Em conjunto com o ultimo frame conhecido para preencher qualquer buraco
+                while written_frames < expected_frames and last_frame is not None:
+                    out.write(last_frame)
+                    written_frames += 1
+
+                # Agora escreve o frame atual
+                out.write(frame)
                 last_frame = frame
                 written_frames += 1
 
@@ -92,8 +102,7 @@ class ScreenRecorder:
 
         out.release()
 
-# Definindo as atividades de inicio após o usuário iniciar a automação    
-    def start(self):
+    def start(self): # Definindo o inicio da função
 
         self.running = True
 
@@ -103,7 +112,7 @@ class ScreenRecorder:
         self.capture_thread.start()
         self.write_thread.start()
 
-    def stop(self):
+    def stop(self): # Definindo o fim da função
 
         self.running = False
 
